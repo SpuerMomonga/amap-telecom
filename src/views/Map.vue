@@ -1,5 +1,5 @@
 <template>
-  <div class="bmap-telecom" id="container"></div>
+  <div class="amap-telecom" id="container"></div>
 </template>
 
 <script setup lang='ts'>
@@ -29,13 +29,13 @@ onMounted(() => {
       success(c);
     }
   });
-
+  
   layer.setMap(map);
 });
 </script>
 
 <style scoped>
-.bmap-telecom {
+.amap-telecom {
   min-width: 100vw;
   min-height: 100vh;
 }
