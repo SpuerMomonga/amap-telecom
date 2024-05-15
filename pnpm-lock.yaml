@@ -10,6 +10,9 @@ dependencies:
     version: 3.4.27(typescript@5.4.5)
 
 devDependencies:
+  '@amap/amap-jsapi-types':
+    specifier: ^0.0.15
+    version: 0.0.15
   '@vitejs/plugin-vue':
     specifier: ^5.0.4
     version: 5.0.4(vite@5.2.11)(vue@3.4.27)
@@ -24,6 +27,10 @@ devDependencies:
     version: 2.0.17(typescript@5.4.5)
 
 packages:
+
+  /@amap/amap-jsapi-types@0.0.15:
+    resolution: {integrity: sha512-oqyRqHpVDZh5bUe2mAJh41ZsziSj0eUzwcfIbiaBNB0eiTJnZNhKsTdk77VOklOjwuwNfsblpKW9LjmWNpeQ7A==}
+    dev: true
 
   /@babel/helper-string-parser@7.24.1:
     resolution: {integrity: sha512-2ofRCjnnA9y+wk8b9IAREroeUP02KHp431N2mhKniy2yKIDKpbrHv9eXwm8cBeWQYcJmzv5qKCu65P47eCF7CQ==}
