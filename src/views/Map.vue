@@ -27,7 +27,7 @@ import AMap from "./amap/AMap.vue";
 import BMap from "./bmap/BMap.vue";
 import { ref } from "vue";
 
-const mapType = ref("amap");
+const mapType = ref("bmap");
 
 const layerCheck = ref<string[]>([]);
 
