@@ -1,42 +1,60 @@
 <template>
-  <div class="amap-telecom" id="container"></div>
+  <div class="amap-telecom">
+    <div class="toggle-map">
+      <n-button type="primary" @click="toggleMap">
+        {{ mapType === "amap" ? "高德地图" : "百度地图" }}
+      </n-button>
+    </div>
+    <n-card class="card-layer" title="数据图层" size="small">
+      <n-checkbox-group v-model:value="layerCheck">
+        <n-flex vertical>
+          <n-checkbox value="dot" label="点位" />
+          <n-checkbox value="sectors" label="扇区" />
+          <n-checkbox value="heat" label="热力" />
+          <n-checkbox value="outline" label="轮廓" />
+          <n-checkbox value="grid" label="栅格" />
+        </n-flex>
+      </n-checkbox-group>
+    </n-card>
+    <AMap v-if="mapType === 'amap'" />
+    <BMap v-else />
+  </div>
 </template>
 
-<script setup lang='ts'>
-import { onMounted } from 'vue';
+<script setup lang="ts">
+import { NButton, NCard, NCheckboxGroup, NCheckbox, NFlex } from "naive-ui";
+import AMap from "./amap/AMap.vue";
+import BMap from "./bmap/BMap.vue";
+import { ref } from "vue";
 
-onMounted(() => {
-  var map = new AMap.Map("container", {
-    zoom: 13,
-    center: [116.39, 39.92],
-  });
+const mapType = ref("amap");
 
-  var layer = new AMap.TileLayer.Flexible({
-    cacheSize: 300,
-    zIndex: 200,
-    createTile: function (x: number, y: number, z: number, success: (ele: HTMLCanvasElement) => void, fail: () => void) {
-      var c = document.createElement('canvas');
-      c.width = c.height = 256;
+const layerCheck = ref<string[]>([]);
 
-      var cxt = c.getContext("2d") as CanvasRenderingContext2D;
-      cxt.font = "15px Verdana";
-      cxt.fillStyle = "#ff0000";
-      cxt.strokeStyle = "#FF0000";
-      cxt.strokeRect(0, 0, 256, 256);
-      cxt.fillText('(' + [x, y, z].join(',') + ')', 10, 30);
-
-      // 通知API切片创建完成
-      success(c);
-    }
-  });
-  
-  layer.setMap(map);
-});
+function toggleMap() {
+  mapType.value = mapType.value === "amap" ? "bmap" : "amap";
+}
 </script>
 
 <style scoped>
 .amap-telecom {
   min-width: 100vw;
   min-height: 100vh;
+  position: relative;
+}
+
+.toggle-map {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 999;
+}
+
+.card-layer {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 999;
+  width: 150px;
 }
 </style>
