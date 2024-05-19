@@ -24,6 +24,7 @@ declare global {
       getSize(): Size;
       addEventListener(event: string, handler: () => void);
       addOverlay(overlay: Overlay );
+      pointToOverlayPixel(point: Point): Pixel;
     }
 
     export class Point {
@@ -36,6 +37,12 @@ declare global {
       constructor(width: number, height: number);
       width: number;
       height: number;
+    }
+
+    export class Pixel {
+      constructor(x: number, y: number);
+      x: number;
+      y: number;
     }
 
     export interface MapOptions {
