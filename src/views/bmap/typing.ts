@@ -6,7 +6,7 @@ export type CreateTile = (
   fail: () => void
 ) => void;
 
-export interface TileFlexibleLayerOptions {
+export type TileFlexibleLayerOptions = {
   /**
    * 缓存瓦片数量，默认 256
    */
@@ -44,7 +44,7 @@ export interface TileFlexibleLayerOptions {
   zIndex?: number;
 }
 
-export interface CacheOptions {
+export type CacheOptions = {
   /**
    * 缓存数量
    */

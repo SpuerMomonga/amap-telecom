@@ -10,71 +10,95 @@ import { CreateTile, TileFlexibleLayerOptions } from "./typing";
  * ```
  */
 export class TileFlexibleLayer extends BMapGL.Overlay {
-  private map: BMapGL.Map | null = null;
+  /**
+   * 百度地图实例
+   */
+  #map: BMapGL.Map | null = null;
 
-  private canvas: HTMLCanvasElement;
+  /**
+   * canvas 元素
+   */
+  #canvas: HTMLCanvasElement;
 
-  private ctx: CanvasRenderingContext2D;
+  #ctx: CanvasRenderingContext2D;
 
-  private minZoom: number = 6;
+  /**
+   * 最小缩放等级
+   */
+  #minZoom: number = 6;
 
-  private maxZoom: number = 21;
+  /**
+   * 最大缩放等级
+   */
+  #maxZoom: number = 21;
 
-  private readonly tileSize: number = 256;
+  /**
+   * 瓦片创建函数
+   */
+  #createTile: CreateTile;
 
-  private createTile: CreateTile;
+  /**
+   * 瓦片加载防抖
+   */
+  #timeoutID: number = 0;
 
-  private timeoutID: number = 0;
+  /**
+   * 瓦片图层叠加层级
+   */
+  #zIndex: number;
 
-  private zIndex: number;
+  /**
+   * 瓦片图层是否可见
+   */
+  #visible: boolean;
 
-  private visible: boolean;
+  #tileGridMap: Map<string, boolean> = new Map();
 
   constructor(opts: TileFlexibleLayerOptions) {
     super();
     // 绘制方法
-    this.createTile = opts.createTile;
-    this.zIndex = opts.zIndex ?? 0;
+    this.#createTile = opts.createTile;
+    this.#zIndex = opts.zIndex ?? 0;
     // 缩放等级
     const minZoom = opts.zooms?.[0];
-    this.minZoom = minZoom && minZoom >= 6 ? minZoom : 6;
+    this.#minZoom = minZoom && minZoom >= 6 ? minZoom : 6;
     const maxZoom = opts.zooms?.[1];
-    this.maxZoom =
-      maxZoom && maxZoom >= this.minZoom && maxZoom <= 21 ? maxZoom : 21;
-    this.visible = opts.visible ?? true;
+    this.#maxZoom =
+      maxZoom && maxZoom >= this.#minZoom && maxZoom <= 21 ? maxZoom : 21;
+    this.#visible = opts.visible ?? true;
     // 初始化 canvas
-    this.canvas = document.createElement("canvas");
-    this.canvas.style.zIndex = this.zIndex.toString();
-    this.ctx = this.canvas.getContext("2d") as CanvasRenderingContext2D;
+    this.#canvas = document.createElement("canvas");
+    this.#canvas.style.zIndex = this.#zIndex.toString();
+    this.#ctx = this.#canvas.getContext("2d") as CanvasRenderingContext2D;
   }
 
   initialize(map: BMapGL.Map) {
-    this.map = map;
+    this.#map = map;
 
-    if (!this.visible) {
+    if (!this.#visible) {
       this.hide();
     }
 
-    this.adjustCanvasSize();
+    this.#adjustCanvasSize();
 
-    map.getPanes().markerPane.appendChild(this.canvas);
+    map.getPanes().markerPane.appendChild(this.#canvas);
 
-    return this.canvas;
+    return this.#canvas;
   }
 
   /**
    * 设置 canvas 比例
    */
-  adjustCanvasRatio() {
+  #adjustCanvasRatio() {
     // TODO
   }
 
   /**
    * 设置 canvas 大小
    */
-  adjustCanvasSize() {
-    const { width, height } = (this.map as BMapGL.Map).getSize();
-    const canvas = this.canvas;
+  #adjustCanvasSize() {
+    const { width, height } = (this.#map as BMapGL.Map).getSize();
+    const canvas = this.#canvas;
     if (width !== canvas.width || height !== canvas.height) {
       canvas.width = width;
       canvas.height = height;
@@ -84,26 +108,26 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
   }
 
   draw() {
-    clearTimeout(this.timeoutID);
-    this.timeoutID = setTimeout(() => {
-      this.drawTiles();
+    clearTimeout(this.#timeoutID);
+    this.#timeoutID = setTimeout(() => {
+      this.#drawTiles();
     }, 5);
   }
 
-  private drawTiles() {
-    const map = this.map as BMapGL.Map;
+  #drawTiles() {
+    const map = this.#map as BMapGL.Map;
     // map是否改变大小
-    this.adjustCanvasSize();
+    this.#adjustCanvasSize();
 
     // 获取地图 zoom
     const zoom = Math.floor(map.getZoom());
 
     // 清空上一次的绘制
-    const ctx = this.ctx;
-    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    const ctx = this.#ctx;
+    ctx.clearRect(0, 0, this.#canvas.width, this.#canvas.height);
 
     // 不满足绘制条件
-    if (zoom < this.minZoom || zoom > this.maxZoom) {
+    if (zoom < this.#minZoom || zoom > this.#maxZoom) {
       // TODO
       return;
     }
@@ -124,9 +148,23 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
     const { x: minX, y: minY } = lngLatToTile(southWest, resolution);
     const { x: maxX, y: maxY } = lngLatToTile(northEast, resolution);
 
-    // 绘制逻辑
-    const drawTile = (x: number, y: number, z: number) => {
-      return function (ele: HTMLCanvasElement) {
+    this.#tileGridMap = new Map();
+
+    for (let x = minX; x <= maxX + 1; x++) {
+      for (let y = minY; y <= maxY + 1; y++) {
+        this.#tileGridMap.set(`${x}-${y}-${z}`, false)
+        this.#drawTile(x, y, z);
+      }
+    }
+  }
+
+  async #drawTile(x: number, y: number, z: number) {
+    const map = this.#map as BMapGL.Map
+    try {
+      const canvasImg = await this.#getTile(x, y, z);
+      // 保证绘制的是最新的瓦片
+      if (this.#tileGridMap.has(`${x}-${y}-${z}`) && !this.#tileGridMap.get(`${x}-${y}-${z}`)) {
+        this.#tileGridMap.set(`${x}-${y}-${z}`, true);
         // 根据栅格编号反推经纬度
         const res = Math.pow(2, 18 - z);
         const southWest = tileToLngLat(new BMapGL.Pixel(x, y), res);
@@ -135,14 +173,10 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
         const { x: startX, y: startY } = map.pointToOverlayPixel(southWest);
         const { x: endX, y: endY } = map.pointToOverlayPixel(northEast);
         // 绘制方法
-        ctx.drawImage(ele, startX, startY, startX - endX, startY - endY);
-      };
-    };
-
-    for (let x = minX; x <= maxX + 1; x++) {
-      for (let y = minY; y <= maxY + 1; y++) {
-        this.createTile(x, y, z, drawTile(x, y, z), () => { });
+        this.#ctx.drawImage(canvasImg, startX, startY, startX - endX, startY - endY);
       }
+    } catch (error) {
+      console.log(error);
     }
   }
 
@@ -152,9 +186,9 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
    * @param y 纵向瓦片编号
    * @param z zoom 层级
    */
-  private getTile(x: number, y: number, z: number): Promise<HTMLCanvasElement> {
+  #getTile(x: number, y: number, z: number): Promise<HTMLCanvasElement> {
     return new Promise<HTMLCanvasElement>((resolve, reject) => {
-      this.createTile(x, y, z, (ele: HTMLCanvasElement) => { resolve(ele) }, () => { reject() })
+      this.#createTile(x, y, z, (ele: HTMLCanvasElement) => { resolve(ele) }, () => { reject() })
     })
   }
 
@@ -163,24 +197,24 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
    * @returns canvas
    */
   getContainer() {
-    return this.canvas;
+    return this.#canvas;
   }
 
   /**
    * 显示图层
    */
   show() {
-    if (!this.canvas) {
-      (this.map as BMapGL.Map).addOverlay(this);
+    if (!this.#canvas) {
+      (this.#map as BMapGL.Map).addOverlay(this);
     }
-    this.canvas.style.display = "block";
+    this.#canvas.style.display = "block";
   }
 
   /**
    * 隐藏图层
    */
   hide() {
-    this.canvas.style.display = "none";
+    this.#canvas.style.display = "none";
   }
 
   /**
@@ -188,8 +222,8 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
    * @param zIndex
    */
   setZIndex(zIndex: number) {
-    this.zIndex = zIndex;
-    this.canvas.style.zIndex = zIndex.toString();
+    this.#zIndex = zIndex;
+    this.#canvas.style.zIndex = zIndex.toString();
   }
 
   /**
@@ -197,6 +231,6 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
    * @returns
    */
   getZIndex() {
-    return this.zIndex;
+    return this.#zIndex;
   }
 }
