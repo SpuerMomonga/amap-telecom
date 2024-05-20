@@ -43,3 +43,15 @@ export interface TileFlexibleLayerOptions {
    */
   zIndex?: number;
 }
+
+export interface CacheOptions {
+  /**
+   * 缓存数量
+   */
+  cacheSize?: number;
+
+  /**
+   * 是否启用缓存
+   */
+  enabled?: boolean;
+}

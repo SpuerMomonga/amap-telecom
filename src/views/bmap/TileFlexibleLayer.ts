@@ -51,7 +51,7 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
   initialize(map: BMapGL.Map) {
     this.map = map;
 
-    if(!this.visible) {
+    if (!this.visible) {
       this.hide();
     }
 
@@ -141,10 +141,21 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
 
     for (let x = minX; x <= maxX + 1; x++) {
       for (let y = minY; y <= maxY + 1; y++) {
-        const success = drawTile(x, y, z);
-        this.createTile(x, y, z, success, () => { });
+        this.createTile(x, y, z, drawTile(x, y, z), () => { });
       }
     }
+  }
+
+  /**
+   * 获取瓦片
+   * @param x 横向瓦片编号
+   * @param y 纵向瓦片编号
+   * @param z zoom 层级
+   */
+  private getTile(x: number, y: number, z: number): Promise<HTMLCanvasElement> {
+    return new Promise<HTMLCanvasElement>((resolve, reject) => {
+      this.createTile(x, y, z, (ele: HTMLCanvasElement) => { resolve(ele) }, () => { reject() })
+    })
   }
 
   /**
