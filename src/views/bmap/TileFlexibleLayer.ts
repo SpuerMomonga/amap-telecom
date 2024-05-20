@@ -1,4 +1,5 @@
 import { lngLatToTile, tileToLngLat } from "../../utils/bmapUtils";
+import { LRUCache } from "./LRUCache";
 import { CreateTile, TileFlexibleLayerOptions } from "./typing";
 
 /**
@@ -54,6 +55,10 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
 
   #tileGridMap: Map<string, boolean> = new Map();
 
+  #cacheTile: LRUCache<HTMLCanvasElement>;
+
+  #count = 1;
+
   constructor(opts: TileFlexibleLayerOptions) {
     super();
     // 绘制方法
@@ -66,6 +71,9 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
     this.#maxZoom =
       maxZoom && maxZoom >= this.#minZoom && maxZoom <= 21 ? maxZoom : 21;
     this.#visible = opts.visible ?? true;
+    this.#cacheTile = new LRUCache({
+      cacheLength: opts.cacheSize ?? 256,
+    });
     // 初始化 canvas
     this.#canvas = document.createElement("canvas");
     this.#canvas.style.zIndex = this.#zIndex.toString();
@@ -111,7 +119,7 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
     clearTimeout(this.#timeoutID);
     this.#timeoutID = setTimeout(() => {
       this.#drawTiles();
-    }, 5);
+    }, 10);
   }
 
   #drawTiles() {
@@ -152,18 +160,24 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
 
     for (let x = minX; x <= maxX + 1; x++) {
       for (let y = minY; y <= maxY + 1; y++) {
-        this.#tileGridMap.set(`${x}-${y}-${z}`, false)
+        this.#tileGridMap.set(`${x}-${y}-${z}`, false);
         this.#drawTile(x, y, z);
       }
     }
   }
 
   async #drawTile(x: number, y: number, z: number) {
-    const map = this.#map as BMapGL.Map
+    const map = this.#map as BMapGL.Map;
     try {
-      const canvasImg = await this.#getTile(x, y, z);
+      const canvasImg = await this.#cacheTile.cacheable(
+        () => this.#getTile(x, y, z),
+        `${x}-${y}-${z}`
+      );
       // 保证绘制的是最新的瓦片
-      if (this.#tileGridMap.has(`${x}-${y}-${z}`) && !this.#tileGridMap.get(`${x}-${y}-${z}`)) {
+      if (
+        this.#tileGridMap.has(`${x}-${y}-${z}`) &&
+        !this.#tileGridMap.get(`${x}-${y}-${z}`)
+      ) {
         this.#tileGridMap.set(`${x}-${y}-${z}`, true);
         // 根据栅格编号反推经纬度
         const res = Math.pow(2, 18 - z);
@@ -173,7 +187,13 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
         const { x: startX, y: startY } = map.pointToOverlayPixel(southWest);
         const { x: endX, y: endY } = map.pointToOverlayPixel(northEast);
         // 绘制方法
-        this.#ctx.drawImage(canvasImg, startX, startY, startX - endX, startY - endY);
+        this.#ctx.drawImage(
+          canvasImg,
+          startX,
+          startY,
+          startX - endX,
+          startY - endY
+        );
       }
     } catch (error) {
       console.log(error);
@@ -188,8 +208,18 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
    */
   #getTile(x: number, y: number, z: number): Promise<HTMLCanvasElement> {
     return new Promise<HTMLCanvasElement>((resolve, reject) => {
-      this.#createTile(x, y, z, (ele: HTMLCanvasElement) => { resolve(ele) }, () => { reject() })
-    })
+      this.#createTile(
+        x,
+        y,
+        z,
+        (ele: HTMLCanvasElement) => {
+          resolve(ele);
+        },
+        () => {
+          reject();
+        }
+      );
+    });
   }
 
   /**

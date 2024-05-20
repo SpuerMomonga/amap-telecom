@@ -48,7 +48,7 @@ export type CacheOptions = {
   /**
    * 缓存数量
    */
-  cacheSize?: number;
+  cacheLength?: number;
 
   /**
    * 是否启用缓存
