@@ -55,9 +55,9 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
 
   #tileGridMap: Map<string, boolean> = new Map();
 
-  #cacheTile: LRUCache<HTMLCanvasElement>;
+  #cacheTile: LRUCache<HTMLCanvasElement | ImageBitmap>;
 
-  #count = 1;
+  #firstTime: boolean = true;
 
   constructor(opts: TileFlexibleLayerOptions) {
     super();
@@ -116,10 +116,12 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
   }
 
   draw() {
+    // 首屏加载减少渲染数量
     clearTimeout(this.#timeoutID);
     this.#timeoutID = setTimeout(() => {
       this.#drawTiles();
-    }, 10);
+      this.#firstTime = false;
+    }, this.#firstTime ? 500 : 5);
   }
 
   #drawTiles() {
@@ -206,13 +208,17 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
    * @param y 纵向瓦片编号
    * @param z zoom 层级
    */
-  #getTile(x: number, y: number, z: number): Promise<HTMLCanvasElement> {
-    return new Promise<HTMLCanvasElement>((resolve, reject) => {
+  #getTile(
+    x: number,
+    y: number,
+    z: number
+  ): Promise<HTMLCanvasElement | ImageBitmap> {
+    return new Promise<HTMLCanvasElement | ImageBitmap>((resolve, reject) => {
       this.#createTile(
         x,
         y,
         z,
-        (ele: HTMLCanvasElement) => {
+        (ele: HTMLCanvasElement | ImageBitmap) => {
           resolve(ele);
         },
         () => {
