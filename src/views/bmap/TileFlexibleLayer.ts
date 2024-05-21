@@ -1,4 +1,4 @@
-import { lngLatToTile, tileToLngLat } from "../../utils/bmapUtils";
+import { lngLatToTile, spiralMatrixFromCenter, tileToLngLat } from "../../utils/bmapUtils";
 import { LRUCache } from "./LRUCache";
 import { CreateTile, TileFlexibleLayerOptions } from "./typing";
 
@@ -53,7 +53,15 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
    */
   #visible: boolean;
 
-  #tileGridMap: Map<string, boolean> = new Map();
+  /**
+   * 已绘制瓦片
+   */
+  #tileGrid: Map<string, boolean> = new Map();
+
+  /**
+   * 追加绘制瓦片
+   */
+  #addTileGrid: Map<string, boolean> = new Map();
 
   #cacheTile: LRUCache<CanvasImageSource>;
 
@@ -161,11 +169,15 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
     const { x: minX, y: minY } = lngLatToTile(southWest, resolution);
     const { x: maxX, y: maxY } = lngLatToTile(northEast, resolution);
 
-    this.#tileGridMap = new Map();
+    const oldTileGrid = this.#tileGrid;
+
+    this.#tileGrid = new Map();
+
+    spiralMatrixFromCenter(minX, maxX, minY, maxY);
 
     for (let x = minX; x <= maxX + 1; x++) {
       for (let y = minY; y <= maxY + 1; y++) {
-        this.#tileGridMap.set(`${x}-${y}-${z}`, false);
+        this.#tileGrid.set(`${x}-${y}-${z}`, false);
         this.#drawTile(x, y, z);
       }
     }
@@ -180,10 +192,10 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
       );
       // 保证绘制的是最新的瓦片
       if (
-        this.#tileGridMap.has(`${x}-${y}-${z}`) &&
-        !this.#tileGridMap.get(`${x}-${y}-${z}`)
+        this.#tileGrid.has(`${x}-${y}-${z}`) &&
+        !this.#tileGrid.get(`${x}-${y}-${z}`)
       ) {
-        this.#tileGridMap.set(`${x}-${y}-${z}`, true);
+        this.#tileGrid.set(`${x}-${y}-${z}`, true);
         // 根据栅格编号反推经纬度
         const res = Math.pow(2, 18 - z);
         const southWest = tileToLngLat(new BMapGL.Pixel(x, y), res);

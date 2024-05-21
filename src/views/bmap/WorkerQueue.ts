@@ -21,7 +21,7 @@ export class WorkerQueue {
    */
   enqueueTask<T>(fn: Function | string, ...args: any[]) {
     const workerContext = 'data:text/javascript,' + 
-    encodeURIComponent(`const __fn = ${fn.toString()}; 
+    encodeURIComponent(`const __fn = ${fn.toString()};
       postMessage(__fn(${args})); self.close();`);
     const taskId = this.#taskId++;
     this.#workers.set(taskId, workerContext);
