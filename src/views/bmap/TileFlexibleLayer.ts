@@ -55,8 +55,11 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
 
   #tileGridMap: Map<string, boolean> = new Map();
 
-  #cacheTile: LRUCache<HTMLCanvasElement | ImageBitmap>;
+  #cacheTile: LRUCache<CanvasImageSource>;
 
+  /**
+   * 是否首次加载瓦片
+   */
   #firstTime: boolean = true;
 
   constructor(opts: TileFlexibleLayerOptions) {
@@ -212,15 +215,11 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
     x: number,
     y: number,
     z: number
-  ): Promise<HTMLCanvasElement | ImageBitmap> {
-    return new Promise<HTMLCanvasElement | ImageBitmap>((resolve, reject) => {
-      this.#createTile(
-        x,
-        y,
-        z,
-        (ele: HTMLCanvasElement | ImageBitmap) => {
-          resolve(ele);
-        },
+  ): Promise<CanvasImageSource> {
+    return new Promise<CanvasImageSource>((resolve, reject) => {
+      this.#createTile(x, y, z, (ele: CanvasImageSource) => {
+        resolve(ele);
+      },
         () => {
           reject();
         }

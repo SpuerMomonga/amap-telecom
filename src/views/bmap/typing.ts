@@ -2,7 +2,7 @@ export type CreateTile = (
   x: number,
   y: number,
   z: number,
-  success: (ele: HTMLCanvasElement | ImageBitmap) => void,
+  success: (ele: CanvasImageSource) => void,
   fail: () => void
 ) => void;
 
