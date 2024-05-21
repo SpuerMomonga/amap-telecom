@@ -28,7 +28,7 @@ onMounted(() => {
       // const a = Math.floor(Math.random() * 1000000);
       // console.time(a.toString());
 
-      // console.log(`第${count++}次请求${x}-${y}-${z}`);
+      console.log(`第${count++}次请求${x}-${y}-${z}`);
 
       queue
         .enqueueTask<CanvasImageSource>(

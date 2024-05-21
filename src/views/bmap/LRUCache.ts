@@ -5,7 +5,7 @@ export class LRUCache<T> {
 
   #enabled: boolean;
 
-  #cacheables: Map<string, T> = new Map();
+  #cacheables: Map<string, Promise<T>> = new Map();
 
   constructor(opt?: CacheOptions) {
     this.#cacheLength = opt?.cacheLength ?? 256;
@@ -17,12 +17,19 @@ export class LRUCache<T> {
       return resource();
     }
     if (this.#cacheables.has(key)) {
-      const value = this.#cacheables.get(key) as T;
+      const value = this.#cacheables.get(key) as Promise<T>;
       this.#cacheables.delete(key);
       this.#cacheables.set(key, value);
       return value;
     }
-    const value = await resource();
+    const value = resource().then(value => {
+      this.#cacheables.set(key, Promise.resolve(value));
+      return value;
+    }).catch(error => {
+      this.#cacheables.delete(key);
+      throw error;
+    });
+
     this.#cacheables.set(key, value);
     if (this.#cacheables.size >= this.#cacheLength) {
       const firstKey = this.#cacheables.keys().next().value;

@@ -1,4 +1,4 @@
-import { lngLatToTile, spiralMatrixFromCenter, tileToLngLat } from "../../utils/bmapUtils";
+import { lngLatToTile, spiralOrder, tileToLngLat } from "../../utils/bmapUtils";
 import { LRUCache } from "./LRUCache";
 import { CreateTile, TileFlexibleLayerOptions } from "./typing";
 
@@ -129,10 +129,13 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
   draw() {
     // 首屏加载减少渲染数量
     clearTimeout(this.#timeoutID);
-    this.#timeoutID = setTimeout(() => {
-      this.#drawTiles();
-      this.#firstTime = false;
-    }, this.#firstTime ? 500 : 5);
+    this.#timeoutID = setTimeout(
+      () => {
+        this.#drawTiles();
+        this.#firstTime = false;
+      },
+      this.#firstTime ? 500 : 5
+    );
   }
 
   #drawTiles() {
@@ -173,14 +176,20 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
 
     this.#tileGrid = new Map();
 
-    spiralMatrixFromCenter(minX, maxX, minY, maxY);
+    const matrix: { x: number; y: number; z: number }[][] = [];
 
-    for (let x = minX; x <= maxX + 1; x++) {
-      for (let y = minY; y <= maxY + 1; y++) {
-        this.#tileGrid.set(`${x}-${y}-${z}`, false);
-        this.#drawTile(x, y, z);
+    for (let x = minX + 1; x <= maxX + 1; x++) {
+      let rows: { x: number; y: number; z: number }[] = [];
+      for (let y = minY + 1; y <= maxY + 1; y++) {
+        rows.push({ x, y, z });
       }
+      matrix.push(rows);
     }
+
+    spiralOrder(matrix, ({ x, y, z }) => {
+      this.#tileGrid.set(`${x}-${y}-${z}`, false);
+      this.#drawTile(x, y, z);
+    });
   }
 
   async #drawTile(x: number, y: number, z: number) {
@@ -223,15 +232,15 @@ export class TileFlexibleLayer extends BMapGL.Overlay {
    * @param y 纵向瓦片编号
    * @param z zoom 层级
    */
-  #getTile(
-    x: number,
-    y: number,
-    z: number
-  ): Promise<CanvasImageSource> {
+  #getTile(x: number, y: number, z: number): Promise<CanvasImageSource> {
     return new Promise<CanvasImageSource>((resolve, reject) => {
-      this.#createTile(x, y, z, (ele: CanvasImageSource) => {
-        resolve(ele);
-      },
+      this.#createTile(
+        x,
+        y,
+        z,
+        (ele: CanvasImageSource) => {
+          resolve(ele);
+        },
         () => {
           reject();
         }

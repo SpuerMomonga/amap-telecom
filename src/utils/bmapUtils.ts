@@ -1,6 +1,9 @@
-export function lngLatToTile(point: BMapGL.Point, resolution: number): BMapGL.Pixel {
+export function lngLatToTile(
+  point: BMapGL.Point,
+  resolution: number
+): BMapGL.Pixel {
   const { BD09toBD09MC } = useCoordTransform();
-  const [x, y] = BD09toBD09MC([point.lng, point.lat])
+  const [x, y] = BD09toBD09MC([point.lng, point.lat]);
   const tileX = x / (256 * resolution);
   const tileY = y / (256 * resolution);
   return new BMapGL.Pixel(Math.floor(tileX), Math.floor(tileY));
@@ -17,81 +20,59 @@ export function tileToLngLat(
   return new BMapGL.Point(lngLat[0], lngLat[1]);
 }
 
-export function spiralMatrixFromCenter(startRow: number, endRow: number, startCol: number, endCol: number) {
-  const matrix: { x: number, y: number }[][] = [];
-  for (let y = startCol; y <= endCol + 1; y++) {
-    const matrixRow = [];
-    for (let x = startRow; x <= endRow + 1; x++) {
-      matrixRow.push({ x, y })
+export function spiralOrder<T>(matrix: T[][], callback: (item: T) => void) {
+  if (matrix.length === 0) return;
+
+  const res: T[] = [];
+
+  let top = 0,
+    bottom = matrix.length - 1,
+    left = 0,
+    right = matrix[0].length - 1;
+
+  while (top < bottom && left < right) {
+    for (let i = left; i < right; i++) {
+      res.push(matrix[top][i]);
     }
-    matrix.push(matrixRow);
-  }
-  debugger;
-  console.log(matrix);
-  // 层级
-  let layer = Math.ceil(Math.min(matrix.length, matrix[0].length) / 2);
-  // 当前遍历次数
-  let index = 0;
-  // 总的需要遍历的数量
-  let elemNum = matrix.length * matrix[0].length
-  // 步进数量
-  let rs = matrix[0].length - layer * 2, cs = matrix.length - layer * 2;
-  // 步幅
-  let steps = 0;
-  // 坐标
-  let r = layer - 1, c = layer;
-  // true 表示横走, false 表示竖走
-  let or = true;
-  // let cd = 1, rd = 0;
-  let d = 1;
-  let turns = 0;
-  if (matrix.length > matrix[0].length) {
-    or = false;
-  }
-  while (index < elemNum) {
-    steps = or ? rs : cs;
-
-    for(let i = 0; i < steps; i++) {
-      let result = {}
-      if(or) {
-        r += d;
-        result = matrix[c][r];
-        console.log(c,r,"cr")
-      } else {
-        c += d;
-        result = matrix[c][r];
-        console.log(c,r,"cr")
-      }
-      console.log(result, 'a');
-      index ++;
+    for (let i = top; i < bottom; i++) {
+      res.push(matrix[i][right]);
     }
-    console.log("-------------");
+    for (let i = right; i > left; i--) {
+      res.push(matrix[bottom][i]);
+    }
+    for (let i = bottom; i > top; i--) {
+      res.push(matrix[i][left]);
+    }
 
-    or = !or;
-
-    turns ++;
-    if(turns % 2 === 0) {
-      rs += 1;
-      cs += 1;
-      d = -d
-    } 
+    right--;
+    left++;
+    bottom--;
+    top++;
   }
+
+  if (top === bottom)
+    for (let i = left; i <= right; i++) res.push(matrix[top][i]);
+  else if (left === right)
+    for (let i = top; i <= bottom; i++) res.push(matrix[i][left]);
+
+  res.reverse().forEach((item) => {
+    callback(item);
+  });
 }
 
 export function useCoordTransform() {
-
   const MCBAND = [12890594.86, 8362377.87, 5591021, 3481989.83, 1678043.12, 0];
   const LLBAND = [75, 60, 45, 30, 15, 0];
   const MC2LL = [
     [
       1.410526172116255e-8, 0.00000898305509648872, -1.9939833816331,
-      200.9824383106796, -187.2403703815547, 91.6087516669843, -23.38765649603339,
-      2.57121317296198, -0.03801003308653, 17337981.2,
+      200.9824383106796, -187.2403703815547, 91.6087516669843,
+      -23.38765649603339, 2.57121317296198, -0.03801003308653, 17337981.2,
     ],
     [
       -7.435856389565537e-9, 0.000008983055097726239, -0.78625201886289,
-      96.32687599759846, -1.85204757529826, -59.36935905485877, 47.40033549296737,
-      -16.50741931063887, 2.28786674699375, 10260144.86,
+      96.32687599759846, -1.85204757529826, -59.36935905485877,
+      47.40033549296737, -16.50741931063887, 2.28786674699375, 10260144.86,
     ],
     [
       -3.030883460898826e-8, 0.00000898305509983578, 0.30071316287616,
@@ -126,19 +107,19 @@ export function useCoordTransform() {
       12053065338.62167, -5124939663.577472, 913311935.9512032, 67.5,
     ],
     [
-      0.00337398766765, 111320.7020202162, 4481351.045890365, -23393751.19931662,
-      79682215.47186455, -115964993.2797253, 97236711.15602145,
-      -43661946.33752821, 8477230.501135234, 52.5,
+      0.00337398766765, 111320.7020202162, 4481351.045890365,
+      -23393751.19931662, 79682215.47186455, -115964993.2797253,
+      97236711.15602145, -43661946.33752821, 8477230.501135234, 52.5,
     ],
     [
       0.00220636496208, 111320.7020209128, 51751.86112841131, 3796837.749470245,
-      992013.7397791013, -1221952.21711287, 1340652.697009075, -620943.6990984312,
-      144416.9293806241, 37.5,
+      992013.7397791013, -1221952.21711287, 1340652.697009075,
+      -620943.6990984312, 144416.9293806241, 37.5,
     ],
     [
       -0.0003441963504368392, 111320.7020576856, 278.2353980772752,
-      2485758.690035394, 6070.750963243378, 54821.18345352118, 9540.606633304236,
-      -2710.55326746645, 1405.483844121726, 22.5,
+      2485758.690035394, 6070.750963243378, 54821.18345352118,
+      9540.606633304236, -2710.55326746645, 1405.483844121726, 22.5,
     ],
     [
       -0.0003218135878613132, 111320.7020701615, 0.00369383431289,
@@ -147,7 +128,11 @@ export function useCoordTransform() {
     ],
   ];
 
-  function transform(x: number, y: number, factors: number[]): [number, number] {
+  function transform(
+    x: number,
+    y: number,
+    factors: number[]
+  ): [number, number] {
     const cc = Math.abs(y) / factors[9];
 
     let xt = factors[0] + factors[1] * Math.abs(x);
@@ -189,21 +174,21 @@ export function useCoordTransform() {
 
   /**
    * 经纬度点计算容器内像素坐标
-   * @param param0 
-   * @param coord 
-   * @returns 
+   * @param param0
+   * @param coord
+   * @returns
    */
-  function pointToPixel({ x, y, z }: { x: number, y: number, z: number }, coord: [number, number]) {
+  function pointToPixel(
+    { x, y, z }: { x: number; y: number; z: number },
+    coord: [number, number]
+  ) {
     // 计算栅格编号的墨卡托坐标
     const res = Math.pow(2, 18 - z);
-    const minx = (x - 1) * res * 256
-    const miny = (y - 1) * res * 256
+    const minx = (x - 1) * res * 256;
+    const miny = (y - 1) * res * 256;
     const [mcx, mcy] = BD09toBD09MC(coord);
-    return [
-      Math.round((mcx - minx) / res),
-      Math.round((mcy - miny) / res)
-    ]
+    return [Math.round((mcx - minx) / res), Math.round((mcy - miny) / res)];
   }
 
-  return { BD09toBD09MC, BD09MCtoBD09, pointToPixel }
+  return { BD09toBD09MC, BD09MCtoBD09, pointToPixel };
 }
