@@ -23,8 +23,9 @@ declare global {
       getPanes(): MapPanes;
       getSize(): Size;
       addEventListener(event: string, handler: () => void);
-      addOverlay(overlay: Overlay );
+      addOverlay(overlay: Overlay);
       pointToOverlayPixel(point: Point): Pixel;
+      addNormalLayer(layer: NormalLayer);
     }
 
     export class Point {
@@ -62,10 +63,56 @@ declare global {
       constructor(opts?: TileLayerOptions);
     }
 
+    export class NormalLayer {
+      constructor(opts?: NormalLayerOptions);
+      onAdd(map: Map, gl: GL);
+      preRender(map: Map, matrix: Matrix, opt: Object);
+      render(gl: GL, matrix: Matrix, opt: Object);
+      getPickedItem(index: number, model: string);
+      afterRender(gl: GL, matrix: Matrix);
+      onDestroy(map: Map, gl: GL)
+      onHide(map: Map, gl: GL);
+      onShow(map: Map, gl: GL);
+      doOnceDraw();
+      setZIndex(zIndex: number);
+      setZIndexTop();
+      setUpLevel();
+      setDownLevel();
+      getZIndex(): number;
+      setVisible(bool: boolean);
+      getVisible(): boolean;
+      setOpacity(opacity: number);
+      getOpacity(): number;
+      setMinZoom(zoom: number);
+      getMinZoom(): number;
+      setMaxZoom(zoom: number);
+      getMaxZoom(): number;
+    }
+
+    export class GL {
+      canvas: HTMLCanvasElement;
+    }
+
+    export class Matrix {
+    }
+
     export class Bounds {
       constructor(sw: Point, ne: Point);
       getSouthWest(): Point;
       getNorthEast(): Point;
+    }
+
+    export interface NormalLayerOptions {
+      visible?: boolean;
+      zIndex?: number;
+      opacity?: number;
+      minZoom?: number;
+      maxZoom?: number;
+      enablePicked?: boolean;
+      autoSelect?: boolean;
+      popEvent?: boolean;
+      pickWidth?: number;
+      pickHeight?: number;
     }
 
     export interface TileLayerOptions {
